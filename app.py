@@ -30,15 +30,26 @@ for cat, default in default_definitions.items():
 st.header("📂 年報語句を含む Excel ファイルをアップロード")
 uploaded_files = st.file_uploader("複数のファイルを選択できます", type=["xlsx"], accept_multiple_files=True)
 
+# === 可能欄位名稱列表 ===
+col_candidates = ["語句内容", "語句內容", "語句", "文"]
+
 if uploaded_files:
     for uploaded_file in uploaded_files:
         df = pd.read_excel(uploaded_file, sheet_name=0)
+        df.columns = df.columns.str.strip().str.replace("\n", "").str.replace("\r", "")
 
-        if "語句内容" not in df.columns:
-            st.warning(f"❗ ファイル {uploaded_file.name} に '語句内容' 列が見つかりません。")
+        target_col = None
+        for col in col_candidates:
+            if col in df.columns:
+                target_col = col
+                break
+
+        if not target_col:
+            st.warning(f"❗ ファイル {uploaded_file.name} に語句を含む列が見つかりません。\n"
+                       f"👉 認識された列一覧: {df.columns.tolist()}")
             continue
 
-        sentences = df["語句内容"].astype(str).tolist()
+        sentences = df[target_col].astype(str).tolist()
 
         # === 句子向量化 ===
         sentence_embeddings = model.encode(sentences, convert_to_tensor=True)
